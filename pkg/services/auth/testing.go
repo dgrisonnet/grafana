@@ -57,8 +57,11 @@ func NewFakeUserAuthTokenService() *FakeUserAuthTokenService {
 	}
 }
 
-func (s *FakeUserAuthTokenService) CreateToken(ctx context.Context, userId int64, clientIP net.IP,
-	userAgent string) (*models.UserToken, error) {
+func (s *FakeUserAuthTokenService) Init() error {
+	return nil
+}
+
+func (s *FakeUserAuthTokenService) CreateToken(ctx context.Context, userId int64, clientIP net.IP, userAgent string) (*models.UserToken, error) {
 	return s.CreateTokenProvider(context.Background(), userId, clientIP, userAgent)
 }
 

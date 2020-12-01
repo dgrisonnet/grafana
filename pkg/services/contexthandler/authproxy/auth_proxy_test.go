@@ -47,8 +47,11 @@ func (m *fakeMultiLDAP) User(login string) (
 	return result, ldap.ServerConfig{}, nil
 }
 
-func prepareMiddleware(t *testing.T, req *http.Request, store *remotecache.RemoteCache) *AuthProxy {
+func prepareMiddleware(t *testing.T, req *http.Request, remoteCache *remotecache.RemoteCache) *AuthProxy {
 	t.Helper()
+
+	cfg := setting.NewCfg()
+	cfg.AuthProxyHeaderName = "X-Killa"
 
 	ctx := &models.ReqContext{
 		Context: &macaron.Context{
@@ -58,10 +61,10 @@ func prepareMiddleware(t *testing.T, req *http.Request, store *remotecache.Remot
 		},
 	}
 
-	auth := New(&Options{
-		Store: store,
-		Ctx:   ctx,
-		OrgID: 4,
+	auth := New(cfg, &Options{
+		RemoteCache: remoteCache,
+		Ctx:         ctx,
+		OrgID:       4,
 	})
 
 	return auth
@@ -71,8 +74,8 @@ func TestMiddlewareContext(t *testing.T) {
 	logger := log.New("test")
 	req, err := http.NewRequest("POST", "http://example.com", nil)
 	require.NoError(t, err)
-	setting.AuthProxyHeaderName = "X-Killa"
-	store := remotecache.NewFakeStore(t)
+
+	cache := remotecache.NewFakeStore(t)
 
 	name := "markelog"
 	req.Header.Add(setting.AuthProxyHeaderName, name)
@@ -81,11 +84,10 @@ func TestMiddlewareContext(t *testing.T) {
 		const id int64 = 33
 		// Set cache key
 		key := fmt.Sprintf(CachePrefix, HashCacheKey(name))
-		err := store.Set(key, id, 0)
+		err := cache.Set(key, id, 0)
 		require.NoError(t, err)
-
 		// Set up the middleware
-		auth := prepareMiddleware(t, req, store)
+		auth := prepareMiddleware(t, req, cache)
 		assert.Equal(t, "auth-proxy-sync-ttl:0a7f3374e9659b10980fd66247b0cf2f", auth.getKey())
 
 		gotID, err := auth.Login(logger, false)
@@ -101,10 +103,10 @@ func TestMiddlewareContext(t *testing.T) {
 		req.Header.Add("X-WEBAUTH-GROUPS", group)
 
 		key := fmt.Sprintf(CachePrefix, HashCacheKey(name+"-"+group))
-		err := store.Set(key, id, 0)
+		err := cache.Set(key, id, 0)
 		require.NoError(t, err)
 
-		auth := prepareMiddleware(t, req, store)
+		auth := prepareMiddleware(t, req, cache)
 		assert.Equal(t, "auth-proxy-sync-ttl:14f69b7023baa0ac98c96b31cec07bc0", auth.getKey())
 
 		gotID, err := auth.Login(logger, false)
@@ -162,9 +164,9 @@ func TestMiddlewareContext_ldap(t *testing.T) {
 			getLDAPConfig = ldap.GetConfig
 		}()
 
-		store := remotecache.NewFakeStore(t)
+		cache := remotecache.NewFakeStore(t)
 
-		auth := prepareMiddleware(t, req, store)
+		auth := prepareMiddleware(t, req, cache)
 
 		gotID, err := auth.Login(logger, false)
 		require.NoError(t, err)
@@ -173,7 +175,7 @@ func TestMiddlewareContext_ldap(t *testing.T) {
 		assert.True(t, stub.userCalled)
 	})
 
-	t.Run("Gets nice error if ldap is enabled but not configured", func(t *testing.T) {
+	t.Run("Gets nice error if LDAP is enabled, but not configured", func(t *testing.T) {
 		const id int64 = 42
 		isLDAPEnabled = func() bool {
 			return true
@@ -189,9 +191,9 @@ func TestMiddlewareContext_ldap(t *testing.T) {
 			getLDAPConfig = ldap.GetConfig
 		}()
 
-		store := remotecache.NewFakeStore(t)
+		cache := remotecache.NewFakeStore(t)
 
-		auth := prepareMiddleware(t, req, store)
+		auth := prepareMiddleware(t, req, cache)
 
 		stub := &fakeMultiLDAP{
 			ID: id,
