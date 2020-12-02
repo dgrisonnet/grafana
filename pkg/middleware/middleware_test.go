@@ -544,15 +544,15 @@ func TestMiddlewareContext(t *testing.T) {
 }
 
 func middlewareScenario(t *testing.T, desc string, fn scenarioFunc) {
-	Convey(desc, func() {
-		defer bus.ClearBusHandlers()
+	t.Run(desc, func(t *testing.T) {
+		t.Cleanup(bus.ClearBusHandlers)
 
 		setting.LoginCookieName = "grafana_session"
 		var err error
 		setting.LoginMaxLifetime, err = gtime.ParseDuration("30d")
 		require.NoError(t, err)
 
-		sc := &scenarioContext{}
+		sc := &scenarioContext{t: t}
 
 		viewsPath, err := filepath.Abs("../../public/views")
 		require.NoError(t, err)
