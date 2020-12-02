@@ -383,6 +383,8 @@ func createMultisearchForTest(c Client) (*MultiSearchRequest, error) {
 }
 
 type scenarioContext struct {
+	t *testing.T
+
 	client         Client
 	request        *http.Request
 	requestBody    *bytes.Buffer
@@ -397,6 +399,7 @@ func httpClientScenario(t *testing.T, desc string, ds *models.DataSource, fn sce
 
 	Convey(desc, func() {
 		sc := &scenarioContext{
+			t:              t,
 			responseStatus: 200,
 			responseBody:   `{ "responses": [] }`,
 		}

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"testing"
 
 	"gopkg.in/macaron.v1"
 
@@ -11,10 +12,11 @@ import (
 	"github.com/grafana/grafana/pkg/models"
 	"github.com/grafana/grafana/pkg/services/auth"
 	"github.com/grafana/grafana/pkg/setting"
-	"github.com/smartystreets/goconvey/convey"
+	"github.com/stretchr/testify/require"
 )
 
 type scenarioContext struct {
+	t                    *testing.T
 	m                    *macaron.Macaron
 	context              *models.ReqContext
 	resp                 *httptest.ResponseRecorder
@@ -47,15 +49,19 @@ func (sc *scenarioContext) withAuthorizationHeader(authHeader string) *scenarioC
 }
 
 func (sc *scenarioContext) fakeReq(method, url string) *scenarioContext {
+	sc.t.Helper()
+
 	sc.resp = httptest.NewRecorder()
 	req, err := http.NewRequest(method, url, nil)
-	convey.So(err, convey.ShouldBeNil)
+	require.NoError(sc.t, err)
 	sc.req = req
 
 	return sc
 }
 
 func (sc *scenarioContext) fakeReqWithParams(method, url string, queryParams map[string]string) *scenarioContext {
+	sc.t.Helper()
+
 	sc.resp = httptest.NewRecorder()
 	req, err := http.NewRequest(method, url, nil)
 	q := req.URL.Query()
@@ -63,7 +69,7 @@ func (sc *scenarioContext) fakeReqWithParams(method, url string, queryParams map
 		q.Add(k, v)
 	}
 	req.URL.RawQuery = q.Encode()
-	convey.So(err, convey.ShouldBeNil)
+	require.NoError(sc.t, err)
 	sc.req = req
 
 	return sc
@@ -75,6 +81,8 @@ func (sc *scenarioContext) handler(fn handlerFunc) *scenarioContext {
 }
 
 func (sc *scenarioContext) exec() {
+	sc.t.Helper()
+
 	if sc.apiKey != "" {
 		sc.req.Header.Add("Authorization", "Bearer "+sc.apiKey)
 	}
@@ -94,7 +102,7 @@ func (sc *scenarioContext) exec() {
 
 	if sc.resp.Header().Get("Content-Type") == "application/json; charset=UTF-8" {
 		err := json.NewDecoder(sc.resp.Body).Decode(&sc.respJson)
-		convey.So(err, convey.ShouldBeNil)
+		require.NoError(sc.t, err)
 	}
 }
 
