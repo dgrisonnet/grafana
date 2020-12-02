@@ -79,7 +79,7 @@ func TestInitContextWithAuthProxy_CachedInvalidUserID(t *testing.T) {
 			Instance: renderSvc,
 		},
 		{
-			Name:     serviceName,
+			Name:     ServiceName,
 			Instance: svc,
 		},
 	})

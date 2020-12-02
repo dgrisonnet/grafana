@@ -33,11 +33,11 @@ const (
 
 var getTime = time.Now
 
-const serviceName = "ContextHandler"
+const ServiceName = "ContextHandler"
 
 func init() {
 	registry.Register(&registry.Descriptor{
-		Name:         serviceName,
+		Name:         ServiceName,
 		Instance:     &ContextHandler{},
 		InitPriority: registry.High,
 	})
